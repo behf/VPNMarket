@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # ==================================================================================
-# === اسکریپت حذف کامل و ایمن پروژه VPNMarket ===
+# === اسکریپت حذف کامل و ایمن پروژه VPNMarket (Fork بهبود‌یافته)                 ===
+# === https://github.com/behf/VPNMarket                                           ===
 # ==================================================================================
 
 set -e
@@ -83,4 +84,4 @@ echo -e "${GREEN}=====================================================${NC}"
 حالا که سرور شما کاملاً تمیز شده است، به سادگی می‌توانید با اجرای همان دستور اولیه، پروژه را از نو نصب کنید:
 
 ```bash
-wget -O install.sh https://raw.githubusercontent.com/arvinvahed/VPNMarket/main/install.sh && sudo bash install.sh
+wget -O install.sh https://raw.githubusercontent.com/behf/VPNMarket/main/install.sh && sudo bash install.sh
