@@ -291,7 +291,7 @@ class SanaeiService implements VpnServiceInterface
 
             // 2. Reset Traffic Usage
             // User requested that renewal should always reset the traffic usage.
-            $resetUrl = rtrim($baseUrl . $apiBasePath, '/') . "/$inboundId/resetClientTraffic/" . $client['email'];
+            $resetUrl = rtrim($baseUrl . $apiBasePath, '/') . "/$inboundId/resetClientTraffic/" . rawurlencode($client['email']);
             $this->getClient($server)->post($resetUrl);
 
             return true;

@@ -30,6 +30,7 @@ return new class extends Migration
             $table->integer('port')->default(2053);
             $table->string('username')->nullable();
             $table->string('password')->nullable();
+            $table->text('api_token')->nullable();
             $table->string('api_path')->default('/panel/api/inbounds'); // Default for Sanaei
             $table->boolean('is_active')->default(true);
             $table->integer('capacity')->default(0); // 0 means unlimited or unknown

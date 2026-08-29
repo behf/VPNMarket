@@ -14,6 +14,8 @@ class VpnServer extends Model
         'port',
         'subscription_port',
         'is_https',
+        'username',
+        'password',
         'api_token',
         'api_path',
         'is_active',
@@ -35,6 +37,7 @@ class VpnServer extends Model
 
     protected $hidden = [
         'api_token',
+        'password',
     ];
 
     public function products(): HasMany
