@@ -73,16 +73,14 @@ class VpnServerResource extends Resource
                             ->label('استفاده از HTTPS')
                             ->default(false)
                             ->helperText('آیا اتصال امن HTTPS استفاده شود؟'),
-                        Forms\Components\TextInput::make('username')
-                            ->label('نام کاربری')
-                            ->maxLength(255)
-                            ->placeholder('نام کاربری پنل')
-                            ->helperText('نام کاربری ورود به پنل'),
-                        Forms\Components\TextInput::make('password')
-                            ->label('رمز عبور')
+                        Forms\Components\TextInput::make('api_token')
+                            ->label('توکن API (Bearer Token)')
                             ->password()
-                            ->maxLength(255)
-                            ->helperText('رمز عبور ورود به پنل'),
+                            ->revealable()
+                            ->required()
+                            ->maxLength(500)
+                            ->placeholder('توکن API را از Settings → Security → API Token در پنل سنایی دریافت کنید')
+                            ->helperText('توکن احراز هویت برای دسترسی به API پنل. برای سنایی: تنظیمات → امنیت → توکن API'),
                         Forms\Components\TextInput::make('api_path')
                             ->label('مسیر API')
                             ->default('/panel/api/inbounds')
