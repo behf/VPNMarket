@@ -2,8 +2,9 @@
 
 # ==================================================================================
 # === اسکریپت نصب نهایی، هوشمند و ضد خطا برای پروژه VPNMarket روی Ubuntu 22.04 ===
-# === نویسنده: Arvin Vahed                                                       ===
-# === https://github.com/arvinvahed/VPNMarket                                    ===
+# === Fork بهبود‌یافته: behf/VPNMarket                                            ===
+# === https://github.com/behf/VPNMarket                                           ===
+# === با پشتیبانی Bearer Token Authentication برای Sanaei                        ===
 # ==================================================================================
 
 set -e
@@ -16,10 +17,11 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 PROJECT_PATH="/var/www/vpnmarket"
-GITHUB_REPO="https://github.com/arvinvahed/VPNMarket.git"
+GITHUB_REPO="https://github.com/behf/VPNMarket.git"
 PHP_VERSION="8.3"
 
-echo -e "${CYAN}--- شروع نصب پروژه VPNMarket ---${NC}"
+echo -e "${CYAN}--- شروع نصب پروژه VPNMarket (Fork بهبود‌یافته) ---${NC}"
+echo -e "${CYAN}--- مخزن: https://github.com/behf/VPNMarket ---${NC}"
 echo
 
 # === دریافت اطلاعات از کاربر ===
@@ -92,7 +94,7 @@ echo "y" | sudo ufw enable
 sudo ufw disable
 
 # === دانلود پروژه ===
-echo -e "${YELLOW}⬇️ دانلود سورس ...${NC}"
+echo -e "${YELLOW}⬇️ دانلود سورس از Fork behf/VPNMarket ...${NC}"
 sudo rm -rf "$PROJECT_PATH"
 sudo git clone $GITHUB_REPO $PROJECT_PATH
 sudo chown -R www-data:www-data $PROJECT_PATH
@@ -199,11 +201,16 @@ fi
 
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "${GREEN}✅ نصب با موفقیت انجام شد!${NC}"
+echo -e "${CYAN}🔗 مخزن: https://github.com/behf/VPNMarket${NC}"
 echo -e "🌐 https://$DOMAIN"
 echo -e "🔑 پنل مدیریت: https://$DOMAIN/admin"
 echo
 echo -e "   - ایمیل ورود: ${YELLOW}admin@example.com${NC}"
 echo -e "   - رمز عبور: ${YELLOW}password${NC}"
+echo
+echo -e "${YELLOW}💡 نکات مهم:${NC}"
+echo -e "   1. برای استفاده از Sanaei، توکن API را از Settings → Security → API Token دریافت کنید"
+echo -e "   2. هیچ نیازی به نام کاربری و رمز عبور نیست (Bearer Token استفاده می‌شود)"
 echo
 echo -e "${RED}⚠️ اقدام فوری: لطفاً بلافاصله پس از اولین ورود، رمز عبور کاربر ادمین را تغییر دهید!${NC}"
 echo -e "${GREEN}=====================================================${NC}"
