@@ -1,4 +1,3 @@
-````markdown
 <p align="center">
   <img src="https://raw.githubusercontent.com/behf/VPNMarket/main/github/github/logo.png" width="350" alt="VPNMarket Logo">
 </p>
@@ -153,4 +152,3 @@ wget -O install.sh https://raw.githubusercontent.com/behf/VPNMarket/main/install
 ---
 
 **ساخته‌شده با ❤️ برای جامعه متن‌باز**
-````
