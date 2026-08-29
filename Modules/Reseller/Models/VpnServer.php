@@ -14,14 +14,14 @@ class VpnServer extends Model
         'port',
         'subscription_port',
         'is_https',
-        'username',
-        'password',
+        'api_token',
         'api_path',
         'is_active',
         'capacity',
         'config',
         'subscription_mode',
         'sub_url_template',
+        'description',
     ];
 
     protected $casts = [
@@ -31,6 +31,10 @@ class VpnServer extends Model
         'subscription_port' => 'integer',
         'capacity' => 'integer',
         'config' => 'array',
+    ];
+
+    protected $hidden = [
+        'api_token',
     ];
 
     public function products(): HasMany
