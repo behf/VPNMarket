@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,18 +11,13 @@ class XUIService
 {
     protected string $baseUrl;
     protected string $basePath;
-    protected string $username;
-    protected string $password;
-    protected CookieJar $cookieJar;
-    protected bool $isLoggedIn = false;
+    protected string $apiToken;
 
-    public function __construct(string $host, string $username, string $password)
+    public function __construct(string $host, string $apiToken)
     {
         $parsedUrl = parse_url(rtrim($host, '/'));
 
         if ($parsedUrl === false) {
-            // Fallback for simple cases or throw exception
-            // If parse_url fails, it's likely a serious URL format issue (e.g. bad port)
             throw new \InvalidArgumentException("Invalid URL format: $host");
         }
 
@@ -34,41 +28,28 @@ class XUIService
             $this->basePath = '/' . $this->basePath;
         }
 
-        $this->username = $username;
-        $this->password = $password;
-        $this->cookieJar = new CookieJar();
+        $this->apiToken = $apiToken;
     }
-
-//    private function getClient(): PendingRequest
-//    {
-//        return Http::withOptions([
-//            'cookies' => $this->cookieJar,
-//            'verify' => false,
-//            'timeout' => 30,
-//        ]);
-//    }
 
     private function getClient(): PendingRequest
     {
         $options = [
-            'cookies' => $this->cookieJar,
             'verify' => false,
             'timeout' => 120,
             'connect_timeout' => 60,
         ];
 
-        // افزودن پشتیبانی از پروکسی اگر در .env تعریف شده باشد
         if (env('HTTP_PROXY')) {
             $options['proxy'] = env('HTTP_PROXY');
         }
 
-        return Http::withOptions($options)->withoutVerifying();
+        return Http::withOptions($options)->withoutVerifying()->withToken($this->apiToken);
     }
 
     public function getClients(int $inboundId): array
     {
-        if (!$this->login()) {
-            Log::error('Cannot get clients: Login failed');
+        if (empty($this->apiToken)) {
+            Log::error('Cannot get clients: API token is not configured');
             return [];
         }
 
@@ -92,7 +73,6 @@ class XUIService
                 'full_response' => $data
             ]);
 
-            // 🔥 اصلاح اساسی: decode کردن رشته JSON settings
             $settings = json_decode($data['obj']['settings'] ?? '{}', true);
             $clients = $settings['clients'] ?? [];
 
@@ -127,54 +107,10 @@ class XUIService
         return false;
     }
 
-    public function login(): bool
-    {
-        if ($this->isLoggedIn) {
-            return true;
-        }
-
-        try {
-            $loginApiUrl = $this->baseUrl . $this->basePath . '/login';
-
-            $response = $this->getClient()->asForm()->post($loginApiUrl, [
-                'username' => $this->username,
-                'password' => $this->password,
-            ]);
-
-            $responseBody = $response->body();
-            $isSuccess = $response->successful() && (
-                    $response->json('success') === true ||
-                    Str::contains($responseBody, 'Login successful') ||
-                    Str::contains($responseBody, 'success') ||
-                    $response->redirect()
-                );
-
-            if ($isSuccess) {
-                Log::info('XUI Login successful', ['url' => $loginApiUrl]);
-                $this->isLoggedIn = true;
-                return true;
-            } else {
-                Log::error('XUI Login Failed', [
-                    'url' => $loginApiUrl,
-                    'status' => $response->status(),
-                    'body' => $responseBody,
-                    'json' => $response->json()
-                ]);
-                return false;
-            }
-        } catch (\Exception $e) {
-            Log::error('XUI Connection Exception:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return false;
-        }
-    }
-
     public function getInbounds(): array
     {
-        if (!$this->login()) {
-            Log::error('Cannot get inbounds: Login failed');
+        if (empty($this->apiToken)) {
+            Log::error('Cannot get inbounds: API token is not configured');
             return [];
         }
 
@@ -206,8 +142,8 @@ class XUIService
 
     public function addClient(int $inboundId, array $clientData): ?array
     {
-        if (!$this->login()) {
-            return ['success' => false, 'msg' => 'Authentication to X-UI panel failed.'];
+        if (empty($this->apiToken)) {
+            return ['success' => false, 'msg' => 'API token is not configured.'];
         }
 
         try {
@@ -306,14 +242,12 @@ class XUIService
 
     public function resetClientTraffic(int $inboundId, string $email): bool
     {
-        if (!$this->login()) {
-            Log::error('Cannot reset traffic: Login failed');
+        if (empty($this->apiToken)) {
+            Log::error('Cannot reset traffic: API token is not configured');
             return false;
         }
 
         try {
-            // ✅ FIX: ساختار URL طبق داکیومنت رسمی 3x-ui
-            // POST /panel/api/inbounds/{inboundId}/resetClientTraffic/{email}
             $url = $this->baseUrl . $this->basePath . "/panel/api/inbounds/{$inboundId}/resetClientTraffic/" . rawurlencode($email);
 
             Log::info('Resetting XUI client traffic', [
@@ -347,10 +281,11 @@ class XUIService
             return false;
         }
     }
+
     public function updateClient(int $inboundId, string $clientId, array $clientData): ?array
     {
-        if (!$this->login()) {
-            return ['success' => false, 'msg' => 'Authentication failed.'];
+        if (empty($this->apiToken)) {
+            return ['success' => false, 'msg' => 'API token is not configured.'];
         }
 
         try {

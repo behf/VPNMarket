@@ -16,6 +16,7 @@ class Server extends Model
         'port',
         'username',
         'password',
+        'api_token',
         'marzban_node_hostname',
         'is_https',
         'path',
@@ -42,6 +43,11 @@ class Server extends Model
         'capacity' => 'integer',
         'current_users' => 'integer',
         'inbound_id' => 'integer',
+    ];
+
+    protected $hidden = [
+        'api_token',
+        'password',
     ];
 
     public function location()

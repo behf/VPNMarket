@@ -42,6 +42,7 @@ class VpnServerResource extends Resource
                                 'marzban' => 'مرزبان',
                             ])
                             ->required()
+                            ->live()
                             ->helperText('نوع پنل مدیریت سرور'),
                         Forms\Components\TextInput::make('ip_address')
                             ->label('آدرس IP / دامنه')

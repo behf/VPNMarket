@@ -331,8 +331,7 @@ class OrderController extends Controller
                 } elseif ($server->type === 'xui') {
                     $xuiService = new XUIService(
                         $server->full_host,
-                        $server->username,
-                        $server->password
+                        $server->api_token
                     );
                     
                     $inboundId = $server->inbound_id;
@@ -567,13 +566,11 @@ class OrderController extends Controller
                 // ==========================================
                 elseif ($panelType === 'xui') {
                     $xuiHost = $server ? $server->full_host : $settings->get('xui_host');
-                    $xuiUser = $server ? $server->username : $settings->get('xui_user');
-                    $xuiPass = $server ? $server->password : $settings->get('xui_pass');
+                    $xuiToken = $server ? $server->api_token : $settings->get('xui_api_token');
 
                     $xuiService = new XUIService(
                         $xuiHost ?? '',
-                        $xuiUser ?? '',
-                        $xuiPass ?? ''
+                        $xuiToken ?? ''
                     );
 
                     $defaultInboundId = $server ? $server->inbound_id : $settings->get('xui_default_inbound_id');
@@ -587,13 +584,11 @@ class OrderController extends Controller
                     // Try to fetch from API first (to ensure fresh config from X-UI directly)
                     $inboundData = null;
                     try {
-                        if ($xuiService->login()) {
-                            $inbounds = $xuiService->getInbounds();
-                            foreach($inbounds as $ib) {
-                                if ($ib['id'] == $numericInboundId) {
-                                    $inboundData = $ib;
-                                    break;
-                                }
+                        $inbounds = $xuiService->getInbounds();
+                        foreach($inbounds as $ib) {
+                            if ($ib['id'] == $numericInboundId) {
+                                $inboundData = $ib;
+                                break;
                             }
                         }
                     } catch (\Exception $e) {
@@ -610,10 +605,6 @@ class OrderController extends Controller
 
                     if (!isset($inboundData)) {
                          throw new \Exception("اینباند با ID {$defaultInboundId} یافت نشد.");
-                    }
-
-                    if (!$xuiService->login()) {
-                        throw new \Exception("خطا در لاگین به پنل X-UI (Host: {$xuiHost}). لطفاً تنظیمات سرور را بررسی کنید.");
                     }
 
                     $clientData = [

@@ -85,10 +85,7 @@ trait ManagesServiceProvisioning
                 if (!$inboundId) {
                     $this->handleProvisioningError('اینباند XUI در تنظیمات ست نشده.', $isTelegramContext); return false;
                 }
-                $xuiService = new XUIService($settings->get('xui_host'), $settings->get('xui_user'), $settings->get('xui_pass'));
-                if (!$xuiService->login()) {
-                    $this->handleProvisioningError('خطا در لاگین به پنل X-UI.', $isTelegramContext); return false;
-                }
+                $xuiService = new XUIService($settings->get('xui_host'), $settings->get('xui_api_token'));
                 $inbound = Inbound::find($inboundId);
                 if (!$inbound || !$inbound->inbound_data) {
                     $this->handleProvisioningError('اطلاعات اینباند پیش‌فرض X-UI یافت نشد.', $isTelegramContext); return false;

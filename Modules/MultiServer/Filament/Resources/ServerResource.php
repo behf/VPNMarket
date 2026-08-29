@@ -71,13 +71,25 @@ class ServerResource extends Resource
                         Forms\Components\Grid::make(2)->schema([
                             Forms\Components\TextInput::make('username')
                                 ->label('نام کاربری پنل')
-                                ->required(),
+                                ->visible(fn (Forms\Get $get) => $get('type') === 'marzban')
+                                ->required(fn (Forms\Get $get) => $get('type') === 'marzban'),
 
                             Forms\Components\TextInput::make('password')
                                 ->label('رمز عبور پنل')
                                 ->password()
                                 ->revealable()
-                                ->required(),
+                                ->visible(fn (Forms\Get $get) => $get('type') === 'marzban')
+                                ->required(fn (Forms\Get $get) => $get('type') === 'marzban'),
+
+                            Forms\Components\TextInput::make('api_token')
+                                ->label('توکن API (Bearer Token)')
+                                ->password()
+                                ->revealable()
+                                ->maxLength(500)
+                                ->visible(fn (Forms\Get $get) => $get('type') === 'xui')
+                                ->required(fn (Forms\Get $get) => $get('type') === 'xui')
+                                ->placeholder('توکن API را از Settings → Security → API Token در پنل سنایی دریافت کنید')
+                                ->helperText('توکن احراز هویت برای دسترسی به API پنل سنایی/X-UI.'),
                         ]),
 
                         Forms\Components\TextInput::make('path')
@@ -123,23 +135,18 @@ class ServerResource extends Resource
 
                                         $host = "{$protocol}://{$cleanIp}:{$port}{$path}";
 
-                                        $user = $get('username');
-                                        $pass = $get('password');
+                                        $token = $get('api_token');
 
-                                        if (!$user || !$pass || !$cleanIp) {
+                                        if (!$token || !$cleanIp) {
                                             return [
                                                 Forms\Components\Placeholder::make('error')
-                                                    ->content('❌ لطفاً ابتدا فیلدهای آدرس، پورت، نام کاربری و رمز عبور را پر کنید.')
+                                                    ->content('❌ لطفاً ابتدا فیلدهای آدرس، پورت و توکن API را پر کنید.')
                                                     ->extraAttributes(['class' => 'text-danger-600'])
                                             ];
                                         }
 
                                         try {
-                                            $xui = new \App\Services\XUIService($host, $user, $pass);
-                                            if (!$xui->login()) {
-                                                throw new \Exception('اتصال به پنل ناموفق بود. نام کاربری یا رمز عبور اشتباه است.');
-                                            }
-
+                                            $xui = new \App\Services\XUIService($host, $token);
                                             $inbounds = $xui->getInbounds();
                                             if (empty($inbounds)) {
                                                 throw new \Exception('هیچ اینباندی در این سرور یافت نشد.');

@@ -116,8 +116,7 @@ class OrderResource extends Resource
 
                             // مقادیر پیش‌فرض
                             $xuiHost = $settings->get('xui_host');
-                            $xuiUser = $settings->get('xui_user');
-                            $xuiPass = $settings->get('xui_pass');
+                            $xuiToken = $settings->get('xui_api_token');
                             $inboundId = (int)$settings->get('xui_default_inbound_id');
 
                             $marzbanHost = $settings->get('marzban_host');
@@ -177,8 +176,7 @@ class OrderResource extends Resource
                                         $marzbanNode = $targetServer->marzban_node_hostname ?? $marzbanHost;
                                     } else {
                                         $xuiHost = $targetServer->full_host;
-                                        $xuiUser = $targetServer->username;
-                                        $xuiPass = $targetServer->password;
+                                        $xuiToken = $targetServer->api_token;
                                         $inboundId = $targetServer->inbound_id;
                                     }
 
@@ -216,8 +214,7 @@ class OrderResource extends Resource
                                     } else throw new \Exception('خطا در مرزبان');
 
                                 } elseif ($panelType === 'xui') {
-                                    $xui = new XUIService($xuiHost, $xuiUser, $xuiPass);
-                                    if (!$xui->login()) throw new \Exception('خطا در لاگین X-UI');
+                                    $xui = new XUIService($xuiHost, $xuiToken);
 
                                     // اینباند
                                     $inboundData = null;

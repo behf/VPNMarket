@@ -2573,7 +2573,7 @@ class WebhookController extends BaseController
         $isMultiServer = false;
         $panelType = $settings->get('panel_type');
         if (empty($panelType)) {
-            $hasXui = !empty($settings->get('xui_host')) && !empty($settings->get('xui_user')) && !empty($settings->get('xui_pass'));
+            $hasXui = !empty($settings->get('xui_host')) && !empty($settings->get('xui_api_token'));
             $hasMarzban = !empty($settings->get('marzban_host'));
             $panelType = $hasXui ? 'xui' : ($hasMarzban ? 'marzban' : 'xui');
         }
@@ -2581,8 +2581,7 @@ class WebhookController extends BaseController
 
         // مقادیر پیش‌فرض
         $xuiHost = $settings->get('xui_host');
-        $xuiUser = $settings->get('xui_user');
-        $xuiPass = $settings->get('xui_pass');
+        $xuiToken = $settings->get('xui_api_token');
         $inboundId = (int) $settings->get('xui_default_inbound_id');
 
         // بررسی مولتی سرور
@@ -2606,8 +2605,7 @@ class WebhookController extends BaseController
                 
                 // X-UI credentials
                 $xuiHost = $targetServer->full_host;
-                $xuiUser = $targetServer->username;
-                $xuiPass = $targetServer->password;
+                $xuiToken = $targetServer->api_token;
                 $inboundId = $targetServer->inbound_id;
 
                 // Marzban credentials
@@ -2670,11 +2668,7 @@ class WebhookController extends BaseController
                     throw new \Exception("Inbound ID نامعتبر است: {$inboundId}");
                 }
 
-                $xui = new XUIService($xuiHost, $xuiUser, $xuiPass);
-
-                if (!$xui->login()) {
-                    throw new \Exception("❌ خطا در لاگین به پنل X-UI");
-                }
+                $xui = new XUIService($xuiHost, $xuiToken);
 
                 // دریافت اینباند
                 $inboundData = null;
@@ -3183,15 +3177,14 @@ class WebhookController extends BaseController
         $isMultiServer = false;
         $panelType = $settings->get('panel_type');
         if (empty($panelType)) {
-            $hasXui = !empty($settings->get('xui_host')) && !empty($settings->get('xui_user')) && !empty($settings->get('xui_pass'));
+            $hasXui = !empty($settings->get('xui_host')) && !empty($settings->get('xui_api_token'));
             $hasMarzban = !empty($settings->get('marzban_host'));
             $panelType = $hasXui ? 'xui' : ($hasMarzban ? 'marzban' : 'xui');
         }
         $targetServer = null;
 
         $xuiHost = $settings->get('xui_host');
-        $xuiUser = $settings->get('xui_user');
-        $xuiPass = $settings->get('xui_pass');
+        $xuiToken = $settings->get('xui_api_token');
         $inboundId = (int) $settings->get('xui_default_inbound_id');
 
         // بررسی مولتی سرور
@@ -3212,8 +3205,7 @@ class WebhookController extends BaseController
                 $isMultiServer = true;
                 $panelType = $targetServer->type ?? 'xui';
                 $xuiHost = $targetServer->full_host;
-                $xuiUser = $targetServer->username;
-                $xuiPass = $targetServer->password;
+                $xuiToken = $targetServer->api_token;
                 $inboundId = $targetServer->inbound_id;
             }
         }
@@ -3250,11 +3242,7 @@ class WebhookController extends BaseController
                     throw new \Exception("❌ Inbound ID نامعتبر: {$inboundId}");
                 }
 
-                $xui = new XUIService($xuiHost, $xuiUser, $xuiPass);
-
-                if (!$xui->login()) {
-                    throw new \Exception("❌ خطا در لاگین به پنل X-UI");
-                }
+                $xui = new XUIService($xuiHost, $xuiToken);
 
                 // گرفتن اطلاعات اینباند
                 $inboundData = null;
@@ -3804,8 +3792,7 @@ class WebhookController extends BaseController
 
             // مقادیر پیش‌فرض
             $xuiHost = $settings->get('xui_host');
-            $xuiUser = $settings->get('xui_user');
-            $xuiPass = $settings->get('xui_pass');
+            $xuiToken = $settings->get('xui_api_token');
             $inboundId = (int) $settings->get('xui_default_inbound_id');
             $linkType = $settings->get('xui_link_type', 'single');
 
@@ -3829,8 +3816,7 @@ class WebhookController extends BaseController
                 if ($targetServer) {
                     $panelType = 'xui';
                     $xuiHost = $targetServer->full_host;
-                    $xuiUser = $targetServer->username;
-                    $xuiPass = $targetServer->password;
+                    $xuiToken = $targetServer->api_token;
                     $inboundId = $targetServer->inbound_id;
                     $linkType = $targetServer->link_type ?? 'single';
                 }
@@ -3861,11 +3847,7 @@ class WebhookController extends BaseController
                 }
 
             } elseif ($panelType === 'xui') {
-                $xuiService = new XUIService($xuiHost, $xuiUser, $xuiPass);
-
-                if (!$xuiService->login()) {
-                    throw new \Exception('خطا در لاگین به پنل X-UI.');
-                }
+                $xuiService = new XUIService($xuiHost, $xuiToken);
 
                 // گرفتن اطلاعات اینباند
                 $inboundData = null;
