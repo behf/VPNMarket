@@ -11,82 +11,53 @@ use Illuminate\Support\Str;
 
 class SanaeiService implements VpnServiceInterface
 {
-    protected $jar;
-
-    public function __construct()
-    {
-        $this->jar = new \GuzzleHttp\Cookie\CookieJar();
-    }
-
+    /**
+     * Get the base URL for API requests.
+     */
     protected function getBaseUrl(VpnServer $server): string
     {
         return rtrim($server->api_url, '/');
     }
 
+    /**
+     * Get the API base path (e.g., /panel/api/inbounds).
+     */
     protected function getApiBasePath(VpnServer $server): string
     {
         $apiPath = trim((string) $server->api_path, '/');
         return $apiPath !== '' ? '/' . $apiPath : '/panel/api/inbounds';
     }
 
-    protected function getPanelBasePath(VpnServer $server): string
-    {
-        $apiPath = trim((string) $server->api_path, '/');
-        if ($apiPath === '') {
-            return '';
-        }
-
-        $segments = explode('/', $apiPath);
-        return '/' . $segments[0];
-    }
-
+    /**
+     * Get the subscription base URL.
+     */
     protected function getSubscriptionBaseUrl(VpnServer $server): string
     {
         return $server->sub_url;
     }
 
+    /**
+     * Get HTTP client with Bearer token authentication.
+     * 
+     * Token-based authentication is stateless and more reliable than cookies.
+     * The token comes from Sanaei Settings → Security → API Token.
+     */
     protected function getClient(VpnServer $server): PendingRequest
     {
         return Http::withOptions([
-            'cookies' => $this->jar,
             'verify' => false,
             'timeout' => 15,
-        ]);
+        ])->withToken($server->api_token);
     }
 
-    protected function login(VpnServer $server): bool
-    {
-        try {
-            $baseUrl = $this->getBaseUrl($server);
-            $panelBase = $this->getPanelBasePath($server);
-            $loginUrl = rtrim($baseUrl . $panelBase, '/') . '/login';
-
-            $response = $this->getClient($server)->post($loginUrl, [
-                'username' => $server->username,
-                'password' => $server->password,
-            ]);
-
-            if ($response->successful() && $response->json('success')) {
-                return true;
-            }
-
-            Log::error('Sanaei Login Failed', [
-                'url' => $loginUrl,
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'json' => $response->json(),
-            ]);
-            return false;
-        } catch (\Exception $e) {
-            Log::error("Sanaei Login Exception: " . $e->getMessage());
-            return false;
-        }
-    }
-
+    /**
+     * Create a new VPN account.
+     */
     public function createAccount(VpnServer $server, VpnProduct $product, string $username, ?string $uuid = null): array
     {
-        if (!$this->login($server)) {
-            return ['success' => false, 'error' => 'Authentication failed'];
+        // Validate that API token is set
+        if (empty($server->api_token)) {
+            return ['success' => false, 'error' => 'API token is not configured'];
         }
 
         $uuid = $uuid ?? Str::uuid()->toString();
@@ -186,6 +157,9 @@ class SanaeiService implements VpnServiceInterface
         }
     }
 
+    /**
+     * Delete a VPN account.
+     */
     public function deleteAccount(VpnServer $server, string $identifier, ?VpnProduct $product = null): bool
     {
         if (!$product) {
@@ -193,7 +167,10 @@ class SanaeiService implements VpnServiceInterface
             return false;
         }
 
-        if (!$this->login($server)) return false;
+        if (empty($server->api_token)) {
+            Log::error("Sanaei Delete: API token is not configured");
+            return false;
+        }
         
         $inboundId = (int) $product->remote_id;
         
@@ -216,10 +193,17 @@ class SanaeiService implements VpnServiceInterface
         }
     }
 
+    /**
+     * Get account information.
+     */
     public function getAccount(VpnServer $server, string $identifier, ?VpnProduct $product = null): ?array
     {
         if (!$product) return null;
-        if (!$this->login($server)) return null;
+        
+        if (empty($server->api_token)) {
+            Log::error("Sanaei Get Account: API token is not configured");
+            return null;
+        }
 
         $inboundId = (int) $product->remote_id;
 
@@ -249,9 +233,15 @@ class SanaeiService implements VpnServiceInterface
         }
     }
 
+    /**
+     * Renew a VPN account (extend expiry and optionally update traffic).
+     */
     public function renewAccount(VpnServer $server, string $identifier, VpnProduct $product, int $daysToAdd, ?int $trafficLimit = null): bool
     {
-        if (!$this->login($server)) return false;
+        if (empty($server->api_token)) {
+            Log::error("Sanaei Renew: API token is not configured");
+            return false;
+        }
 
         $client = $this->getAccount($server, $identifier, $product);
         if (!$client) {
@@ -312,6 +302,9 @@ class SanaeiService implements VpnServiceInterface
         }
     }
 
+    /**
+     * Clean and normalize VPN configuration links.
+     */
     protected function cleanVlessLink(string $link): string
     {
         // 1. Check if it's a valid link (vless://...)
