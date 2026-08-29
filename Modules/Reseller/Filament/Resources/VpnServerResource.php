@@ -73,12 +73,27 @@ class VpnServerResource extends Resource
                             ->label('استفاده از HTTPS')
                             ->default(false)
                             ->helperText('آیا اتصال امن HTTPS استفاده شود؟'),
+                        Forms\Components\TextInput::make('username')
+                            ->label('نام کاربری')
+                            ->maxLength(255)
+                            ->visible(fn (Forms\Get $get) => $get('type') === 'marzban')
+                            ->required(fn (Forms\Get $get) => $get('type') === 'marzban')
+                            ->helperText('نام کاربری مدیر پنل مرزبان'),
+                        Forms\Components\TextInput::make('password')
+                            ->label('رمز عبور')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->visible(fn (Forms\Get $get) => $get('type') === 'marzban')
+                            ->required(fn (Forms\Get $get) => $get('type') === 'marzban')
+                            ->helperText('رمز عبور مدیر پنل مرزبان'),
                         Forms\Components\TextInput::make('api_token')
                             ->label('توکن API (Bearer Token)')
                             ->password()
                             ->revealable()
-                            ->required()
                             ->maxLength(500)
+                            ->visible(fn (Forms\Get $get) => $get('type') === 'sanaei')
+                            ->required(fn (Forms\Get $get) => $get('type') === 'sanaei')
                             ->placeholder('توکن API را از Settings → Security → API Token در پنل سنایی دریافت کنید')
                             ->helperText('توکن احراز هویت برای دسترسی به API پنل. برای سنایی: تنظیمات → امنیت → توکن API'),
                         Forms\Components\TextInput::make('api_path')
