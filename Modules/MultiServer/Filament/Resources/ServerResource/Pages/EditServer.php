@@ -21,4 +21,12 @@ class EditServer extends EditRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+    protected function fillForm(): void
+    {
+        $data = $this->record->toArray();
+        $data['api_token'] = $this->record->getRawOriginal('api_token');
+        $data['password'] = $this->record->getRawOriginal('password');
+        $this->form->fill($data);
+    }
 }
