@@ -73,8 +73,11 @@ class XUIService
                 'full_response' => $data
             ]);
 
-            $settings = json_decode($data['obj']['settings'] ?? '{}', true);
-            $clients = $settings['clients'] ?? [];
+            $rawSettings = $data['obj']['settings'] ?? '{}';
+            $settings = is_array($rawSettings)
+                ? $rawSettings
+                : json_decode((string) $rawSettings, true);
+            $clients = is_array($settings) ? ($settings['clients'] ?? []) : [];
 
             Log::info('Successfully fetched clients', [
                 'inbound_id' => $inboundId,
