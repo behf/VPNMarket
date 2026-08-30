@@ -2650,6 +2650,7 @@ class WebhookController extends BaseController
                     'username' => $uniqueUsername,
                     'expire' => $expiresAt ? $expiresAt->getTimestamp() : null,
                     'data_limit' => $plan->volume_gb * 1024 * 1024 * 1024,
+                    'limit_ip' => (int) ($plan->ip_limit ?? 0),
                 ]);
 
                 if (!empty($response['subscription_url'])) {
@@ -2697,6 +2698,7 @@ class WebhookController extends BaseController
                     'email' => $uniqueUsername,
                     'total' => $plan->volume_gb * 1024 * 1024 * 1024,
                     'expiryTime' => $expiresAt ? $expiresAt->getTimestamp() * 1000 : null,
+                    'limitIp' => (int) ($plan->ip_limit ?? 0),
                 ];
 
                 if ($linkType === 'subscription') {
@@ -3223,6 +3225,7 @@ class WebhookController extends BaseController
                 $updateResponse = $marzban->updateUser($uniqueUsername, [
                     'expire' => $newExpiryDate->timestamp,
                     'data_limit' => $plan->volume_gb * 1073741824,
+                    'limit_ip' => (int) ($plan->ip_limit ?? 0),
                 ]);
                 $resetResponse = $marzban->resetUserTraffic($uniqueUsername);
 
@@ -3279,6 +3282,7 @@ class WebhookController extends BaseController
                     'email' => $uniqueUsername,
                     'total' => $plan->volume_gb * 1073741824, // حجم جدید بر حسب بایت
                     'expiryTime' => $newExpiryDate->timestamp * 1000, // زمان انقضای جدید
+                    'limitIp' => (int) ($plan->ip_limit ?? 0),
                 ];
 
                 if ($linkType === 'subscription' && isset($client['subId'])) {

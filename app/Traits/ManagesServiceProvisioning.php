@@ -65,7 +65,7 @@ trait ManagesServiceProvisioning
                 $marzbanService = new MarzbanService($settings->get('marzban_host'), $settings->get('marzban_sudo_username'), $settings->get('marzban_sudo_password'), $settings->get('marzban_node_hostname'));
 
                 // مطمئن شوید مدل Plan ستون data_limit_gb را دارد (در کد شما volume_gb بود، من به data_limit_gb تغییر دادم)
-                $userData = ['expire' => $newExpiresAt->getTimestamp(), 'data_limit' => $plan->data_limit_gb * 1024 * 1024 * 1024];
+                $userData = ['expire' => $newExpiresAt->getTimestamp(), 'data_limit' => $plan->data_limit_gb * 1024 * 1024 * 1024, 'limit_ip' => (int) ($plan->ip_limit ?? 0)];
 
                 $response = $isRenewal
                     ? $marzbanService->updateUser($uniqueUsername, $userData)
@@ -93,7 +93,7 @@ trait ManagesServiceProvisioning
 
                 $inboundData = json_decode($inbound->inbound_data, true);
                 // مطمئن شوید مدل Plan ستون data_limit_gb را دارد (در کد شما volume_gb بود، من به data_limit_gb تغییر دادم)
-                $clientData = ['email' => $uniqueUsername, 'total' => $plan->data_limit_gb * 1024 * 1024 * 1024, 'expiryTime' => $newExpiresAt->getTimestamp() * 1000];
+                $clientData = ['email' => $uniqueUsername, 'total' => $plan->data_limit_gb * 1024 * 1024 * 1024, 'expiryTime' => $newExpiresAt->getTimestamp() * 1000, 'limitIp' => (int) ($plan->ip_limit ?? 0)];
 
                 if ($isRenewal) {
                     //TODO: منطق تمدید کاربر در XUI (یافتن کاربر و آپدیت)

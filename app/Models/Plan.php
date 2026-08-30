@@ -18,13 +18,15 @@ class Plan extends Model
         'is_active',
         'server_type',
         'volume_gb',
-        'duration_days'
+        'duration_days',
+        'ip_limit'
     ];
 
     protected $casts = [
         'features' => 'array',
         'is_popular' => 'boolean',
         'is_active' => 'boolean',
+        'ip_limit' => 'integer',
     ];
     public function orders()
     {

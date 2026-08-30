@@ -60,6 +60,13 @@ class PlanResource extends Resource
                     ->helperText('مثال: 30 = ۱ ماهه، 90 = ۳ ماهه، 365 = ۱ ساله')
                     ->rules(['min:1']),
 
+                Forms\Components\TextInput::make('ip_limit')
+                    ->label('محدودیت تعداد دستگاه (IP)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->default(0)
+                    ->helperText('تعداد دستگاههای همزمان برای مشتریان این پلن. 0 = بدون محدودیت'),
+
                 Forms\Components\Select::make('server_type')
                     ->label('نوع سرور (پنل)')
                     ->options([
@@ -106,6 +113,10 @@ class PlanResource extends Resource
                     ->label('قیمت ماهانه')
                     ->formatStateUsing(fn ($record) => number_format($record->monthly_price) . ' تومان')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('ip_limit')
+                    ->label('محدودیت IP')
+                    ->formatStateUsing(fn ($state) => $state > 0 ? $state : 'نامحدود'),
 
                 Tables\Columns\TextColumn::make('server_type')
                     ->label('نوع سرور')

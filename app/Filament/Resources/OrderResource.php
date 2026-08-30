@@ -70,69 +70,7 @@ class OrderResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Action::make('approve')->label('تایید و اجرا')->icon('heroicon-o-check-circle')->color('success')->requiresConfirmation()->modalHeading('تایید پرداخت سفارش')->modalDescription('آیا از تایید این پرداخت اطمینان دارید؟')->visible(fn (Order $order): bool => $order->status === 'pending')
-                    ->form([
-                        Forms\Components\TextInput::make('limitIp')
-                            ->label('محدودیت تعداد دستگاه (IP)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(999)
-                            ->default(0)
-                            ->helperText('0 = بدون محدودیت')
-                            ->hidden(fn (Order $order): bool => !$order->plan_id),
-                    ])
-                    ->mountUsing(function (Order $order, Forms\Form $form) {
-                        $limitIp = 0;
-                        try {
-                            $settings = Setting::all()->pluck('value', 'key');
-                            $username = trim($order->panel_username ?? '');
-                            if (!$username && $order->renews_order_id) {
-                                $username = trim(Order::find($order->renews_order_id)?->panel_username ?? '');
-                            }
-                            if (!$username) {
-                                $username = "user-{$order->user_id}-order-" . ($order->renews_order_id ?: $order->id);
-                            }
-
-                            $serverId = $order->server_id;
-                            if (!$serverId && $order->renews_order_id) {
-                                $serverId = Order::find($order->renews_order_id)?->server_id;
-                            }
-                            if (!$serverId && class_exists('Modules\MultiServer\Models\Server')) {
-                                $serverId = \Modules\MultiServer\Models\Server::where('is_active', true)
-                                    ->whereRaw('current_users < capacity')->first()?->id;
-                            }
-
-                            $targetServer = $serverId && class_exists('Modules\MultiServer\Models\Server')
-                                ? \Modules\MultiServer\Models\Server::find($serverId) : null;
-                            $panelType = $targetServer ? strtolower($targetServer->type ?? 'xui') : strtolower((string) $settings->get('panel_type', 'xui'));
-                            if ($panelType === 'sanaei') $panelType = 'xui';
-
-                            if ($panelType === 'marzban') {
-                                $marzban = new MarzbanService(
-                                    (string) ($targetServer?->full_host ?? $settings->get('marzban_host') ?? ''),
-                                    (string) ($targetServer?->username ?? $settings->get('marzban_sudo_username') ?? ''),
-                                    (string) ($targetServer?->password ?? $settings->get('marzban_sudo_password') ?? ''),
-                                    (string) ($targetServer?->marzban_node_hostname ?? $settings->get('marzban_node_hostname') ?? '')
-                                );
-                                $existing = $marzban->getUser($username);
-                                $limitIp = (int) ($existing['limit_ip'] ?? 0);
-                            } else {
-                                $xuiHost = $targetServer?->full_host ?? $settings->get('xui_host');
-                                $xuiToken = $targetServer?->api_token ?? $settings->get('xui_api_token');
-                                $inboundId = (int) ($targetServer?->inbound_id ?? $settings->get('xui_default_inbound_id'));
-                                if ($xuiHost && $xuiToken && $inboundId) {
-                                    $xui = new XUIService($xuiHost, $xuiToken);
-                                    $client = collect($xui->getClients($inboundId))->first(fn ($c) => strtolower(trim($c['email'] ?? '')) === strtolower($username));
-                                    $limitIp = (int) ($client['limitIp'] ?? 0);
-                                }
-                            }
-                        } catch (\Throwable $e) {
-                            Log::warning('limitIp prefill failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
-                            $limitIp = 0;
-                        }
-
-                        $form->fill(['limitIp' => $limitIp]);
-                    })
-                    ->action(function (Order $order, array $data) {
+                    ->action(function (Order $order) {
                         DB::transaction(function () use ($order) {
                             $settings = Setting::all()->pluck('value', 'key');
                             /** @var \App\Models\User $user */
@@ -263,7 +201,7 @@ class OrderResource extends Resource
                                         (string) ($marzbanPass ?? ''),
                                         (string) ($marzbanNode ?? '')
                                     );
-                                    $userData = ['expire' => $newExpiresAt->getTimestamp(), 'data_limit' => $plan->volume_gb * 1073741824, 'limit_ip' => (int) ($data['limitIp'] ?? 0)];
+                                    $userData = ['expire' => $newExpiresAt->getTimestamp(), 'data_limit' => $plan->volume_gb * 1073741824, 'limit_ip' => (int) ($plan->ip_limit ?? 0)];
                                     if ($isRenewal) {
                                         $response = $marzbanService->updateUser($uniqueUsername, $userData);
                                         $marzbanService->resetUserTraffic($uniqueUsername);
@@ -291,7 +229,7 @@ class OrderResource extends Resource
 
                                     // نوع لینک (الان که سرور درست پیدا شده، این هم درست کار می‌کند)
                                     $linkType = $targetServer ? ($targetServer->link_type ?? 'single') : $settings->get('xui_link_type', 'single');
-                                    $clientData = ['email' => $uniqueUsername, 'total' => $plan->volume_gb * 1073741824, 'expiryTime' => $newExpiresAt->getTimestamp() * 1000, 'limitIp' => (int) ($data['limitIp'] ?? 0)];
+                                    $clientData = ['email' => $uniqueUsername, 'total' => $plan->volume_gb * 1073741824, 'expiryTime' => $newExpiresAt->getTimestamp() * 1000, 'limitIp' => (int) ($plan->ip_limit ?? 0)];
 
                                     // عملیات پنل
                                     if ($isRenewal) {

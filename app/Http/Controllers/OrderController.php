@@ -545,7 +545,8 @@ class OrderController extends Controller
 
                     $userData = [
                         'expire' => $timestamp,
-                        'data_limit' => $plan->volume_gb * 1073741824
+                        'data_limit' => $plan->volume_gb * 1073741824,
+                        'limit_ip' => (int) ($plan->ip_limit ?? 0)
                     ];
 
                     $response = $isRenewal
@@ -610,7 +611,8 @@ class OrderController extends Controller
                     $clientData = [
                         'email' => $uniqueUsername,
                         'total' => $plan->volume_gb * 1073741824,
-                        'expiryTime' => $timestamp * 1000
+                        'expiryTime' => $timestamp * 1000,
+                        'limitIp' => (int) ($plan->ip_limit ?? 0)
                     ];
 
                     // ==========================================
