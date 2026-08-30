@@ -142,7 +142,7 @@ trait ManagesServiceProvisioning
                         $uuid = $response['generated_uuid'] ?? null;
                         if (!$uuid) { $this->handleProvisioningError('UUID از پنل XUI دریافت نشد.', $isTelegramContext); return false; }
 
-                        $streamSettings = json_decode($inboundData['streamSettings'], true);
+                        $streamSettings = XUIService::decodePanelJson($inboundData['streamSettings'] ?? null);
                         $parsedUrl = parse_url($settings->get('xui_host'));
                         $serverAddress = !empty($inboundData['listen']) ? $inboundData['listen'] : $parsedUrl['host'];
                         $port = $inboundData['port'];

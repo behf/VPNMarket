@@ -31,6 +31,21 @@ class XUIService
         $this->apiToken = $apiToken;
     }
 
+    /**
+     * The panel may return settings/streamSettings as a JSON string (old API)
+     * or an already-decoded nested object (new API). Normalize to an array.
+     */
+    public static function decodePanelJson(mixed $value, array $default = []): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_string($value) && $value !== '') {
+            return json_decode($value, true) ?? $default;
+        }
+        return $default;
+    }
+
     private function getClient(): PendingRequest
     {
         $options = [

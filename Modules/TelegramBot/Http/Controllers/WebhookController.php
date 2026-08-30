@@ -2713,12 +2713,12 @@ class WebhookController extends BaseController
                     // استخراج اطلاعات
                     $uuid = $response['generated_uuid'] ?? null;
                     if (!$uuid && isset($response['obj']['settings'])) {
-                        $cSettings = json_decode($response['obj']['settings'], true);
+                        $cSettings = XUIService::decodePanelJson($response['obj']['settings']);
                         $uuid = $cSettings['clients'][0]['id'] ?? null;
                     }
                     $subId = $response['generated_subId'] ?? $clientData['subId'] ?? null;
 
-                    $streamSettings = json_decode($inboundData['streamSettings'] ?? '{}', true);
+                    $streamSettings = XUIService::decodePanelJson($inboundData['streamSettings'] ?? null);
                     $protocol = $inboundData['protocol'] ?? 'vless';
                     $inboundPort = $inboundData['port'] ?? 443;
                     $serverAddress = parse_url($xuiHost, PHP_URL_HOST);
@@ -3878,13 +3878,13 @@ class WebhookController extends BaseController
                 if ($response && isset($response['success']) && $response['success']) {
                     $uuid = $response['generated_uuid'] ?? null;
                     if (!$uuid && isset($response['obj']['settings'])) {
-                        $cSettings = json_decode($response['obj']['settings'], true);
+                        $cSettings = XUIService::decodePanelJson($response['obj']['settings']);
                         $uuid = $cSettings['clients'][0]['id'] ?? null;
                     }
                     $subId = $response['generated_subId'] ?? $clientData['subId'] ?? null;
 
                     // ساخت لینک کانفیگ
-                    $streamSettings = json_decode($inboundData['streamSettings'] ?? '{}', true);
+                    $streamSettings = XUIService::decodePanelJson($inboundData['streamSettings'] ?? null);
                     $protocol = $inboundData['protocol'] ?? 'vless';
                     $inboundPort = $inboundData['port'] ?? 443;
                     $serverAddress = parse_url($xuiHost, PHP_URL_HOST);

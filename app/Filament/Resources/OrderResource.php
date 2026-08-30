@@ -273,14 +273,14 @@ class OrderResource extends Resource
                                             if ($linkType === 'subscription') $clientData['subId'] = Str::random(16);
                                             $addRes = $xui->addClient($inboundData['id'], $clientData);
                                             if ($addRes && ($addRes['success'] ?? false)) {
-                                                $finalUuid = $addRes['generated_uuid'] ?? json_decode($addRes['obj']['settings'], true)['clients'][0]['id'];
+                                                $finalUuid = $addRes['generated_uuid'] ?? (XUIService::decodePanelJson($addRes['obj']['settings'] ?? null)['clients'][0]['id'] ?? null);
                                                 $finalSubId = $addRes['generated_subId'] ?? $clientData['subId'];
                                                 if ($targetServer) $targetServer->increment('current_users');
                                             } else throw new \Exception('خطا در ساخت کاربر: ' . ($addRes['msg'] ?? 'Unknown error'));
                                         }
                                     }
                                     // ساخت لینک (با تنظیمات سرور درست)
-                                    $stream = json_decode($inboundData['streamSettings'] ?? '{}', true);
+                                    $stream = XUIService::decodePanelJson($inboundData['streamSettings'] ?? null);
                                     $proto = $inboundData['protocol'] ?? 'vless';
                                     $port = $inboundData['port'] ?? 443;
 
