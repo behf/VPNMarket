@@ -8,15 +8,13 @@
 
 @section('content')
     <div class="welcome-box" data-aos="fade-up">
-        <h1>نصب با موفقیت انجام شد!</h1>
+        <h1>به Skyline خوش آمدید</h1>
         <p>
-            به <span class="brand">VPNMarket</span> خوش آمدید.
-            <br>
-            برای شروع و انتخاب قالب اصلی وب‌سایت، لطفاً از طریق دکمه زیر وارد پنل مدیریت شوید.
+            برای شروع ابتدا از طریق دکمه زیر ثبت نام کنید.
         </p>
-        <a href="/admin" class="btn-admin-panel">
-            <i class="fas fa-cogs me-2"></i>
-            ورود به پنل مدیریت
+        <a href="/register" class="btn-admin-panel">
+            <i class="fas fa-user-plus me-2"></i>
+            ثبت نام
         </a>
     </div>
 @endsection
