@@ -29,6 +29,21 @@ class SanaeiService implements VpnServiceInterface
     }
 
     /**
+     * Get the client API base path (e.g., /panel/api/clients).
+     * New Sanaei versions manage clients under /panel/api/clients instead of /panel/api/inbounds.
+     */
+    protected function getClientApiBasePath(VpnServer $server): string
+    {
+        $trimmed = rtrim($this->getApiBasePath($server), '/');
+
+        if (str_ends_with($trimmed, '/inbounds')) {
+            $trimmed = substr($trimmed, 0, -strlen('/inbounds'));
+        }
+
+        return $trimmed . '/clients';
+    }
+
+    /**
      * Get the subscription base URL.
      */
     protected function getSubscriptionBaseUrl(VpnServer $server): string
@@ -85,13 +100,34 @@ class SanaeiService implements VpnServiceInterface
 
         try {
             $baseUrl = $this->getBaseUrl($server);
-            $apiBasePath = $this->getApiBasePath($server);
-            $addClientUrl = rtrim($baseUrl . $apiBasePath, '/') . '/addClient';
+            $clientApiBasePath = $this->getClientApiBasePath($server);
+            $addClientUrl = rtrim($baseUrl . $clientApiBasePath, '/') . '/add';
 
-            $response = $this->getClient($server)->post($addClientUrl, [
-                'id' => $inboundId,
-                'settings' => json_encode(['clients' => [$clientSettings]]) 
-            ]);
+            // Per-protocol secrets (uuid/password/auth) are generated server-side when omitted.
+            $payload = [
+                'client' => [
+                    'email' => $username,
+                    'flow' => $clientSettings['flow'] ?? '',
+                    'security' => 'auto',
+                    'totalGB' => $clientSettings['totalGB'] ?? 0,
+                    'expiryTime' => $clientSettings['expiryTime'] ?? 0,
+                    'reset' => 0,
+                    'resetDay' => 0,
+                    'resetMax' => 0,
+                    'trafficReset' => 'never',
+                    'trafficResetDay' => 1,
+                    'limitIp' => 0,
+                    'limitHwid' => 0,
+                    'tgId' => '',
+                    'group' => '',
+                    'comment' => '',
+                    'enable' => true,
+                    'subId' => $subId,
+                ],
+                'inboundIds' => [$inboundId],
+            ];
+
+            $response = $this->getClient($server)->post($addClientUrl, $payload);
 
             if ($response->successful() && $response->json('success')) {
                 $subBase = rtrim($this->getSubscriptionBaseUrl($server), '/');
@@ -173,18 +209,22 @@ class SanaeiService implements VpnServiceInterface
         }
         
         $inboundId = (int) $product->remote_id;
-        
+
         try {
+            // New Sanaei API deletes by email; identifier may be a uuid, so resolve it.
+            $client = $this->getAccount($server, $identifier, $product);
+            $email = $client['email'] ?? $identifier;
+
             $baseUrl = $this->getBaseUrl($server);
-            $apiBasePath = $this->getApiBasePath($server);
-            $deleteUrl = rtrim($baseUrl . $apiBasePath, '/') . "/$inboundId/delClient/$identifier";
+            $clientApiBasePath = $this->getClientApiBasePath($server);
+            $deleteUrl = rtrim($baseUrl . $clientApiBasePath, '/') . '/del/' . rawurlencode($email);
 
             $response = $this->getClient($server)->post($deleteUrl);
-            
+
             if ($response->successful() && $response->json('success')) {
                 return true;
             }
-            
+
             Log::error("Sanaei Delete Failed: " . $response->body());
             return false;
         } catch (\Exception $e) {
@@ -216,11 +256,14 @@ class SanaeiService implements VpnServiceInterface
             
             if ($response->successful() && $response->json('success')) {
                 $obj = $response->json('obj');
-                $settings = json_decode($obj['settings'], true);
-                
-                if (isset($settings['clients'])) {
+                $rawSettings = $obj['settings'] ?? [];
+                $settings = is_array($rawSettings)
+                    ? $rawSettings
+                    : json_decode((string) $rawSettings, true);
+
+                if (is_array($settings) && isset($settings['clients'])) {
                     foreach ($settings['clients'] as $client) {
-                        if ($client['id'] === $identifier) {
+                        if (($client['id'] ?? null) === $identifier || ($client['email'] ?? null) === $identifier) {
                             return $client;
                         }
                     }
@@ -271,18 +314,19 @@ class SanaeiService implements VpnServiceInterface
 
         try {
             $baseUrl = $this->getBaseUrl($server);
-            $apiBasePath = $this->getApiBasePath($server);
-            
-            // 1. Update Client Settings
-            $updateUrl = rtrim($baseUrl . $apiBasePath, '/') . "/updateClient/$identifier";
-            
-            // Sanaei/X-UI expects 'settings' to be a JSON string containing the 'clients' array with the single client
-            $settingsJson = json_encode(['clients' => [$client]]);
+            $clientApiBasePath = $this->getClientApiBasePath($server);
+            $email = $client['email'] ?? $identifier;
 
-            $response = $this->getClient($server)->post($updateUrl, [
-                'id' => $inboundId,
-                'settings' => $settingsJson
-            ]);
+            // 1. Update Client Settings
+            // New Sanaei API: POST /panel/api/clients/update/{email} with the full client JSON
+            // (the server replaces the row, it does not patch).
+            $updateUrl = rtrim($baseUrl . $clientApiBasePath, '/') . '/update/' . rawurlencode($email);
+
+            $client['email'] = $email;
+            $client['enable'] = true;
+            $client['subId'] = $client['subId'] ?? Str::random(16);
+
+            $response = $this->getClient($server)->post($updateUrl, $client);
 
             if (!$response->successful() || !$response->json('success')) {
                 Log::error("Sanaei Renew Update Failed: " . $response->body());
@@ -291,7 +335,8 @@ class SanaeiService implements VpnServiceInterface
 
             // 2. Reset Traffic Usage
             // User requested that renewal should always reset the traffic usage.
-            $resetUrl = rtrim($baseUrl . $apiBasePath, '/') . "/$inboundId/resetClientTraffic/" . rawurlencode($client['email']);
+            // New Sanaei API: POST /panel/api/clients/resetTraffic/{email}
+            $resetUrl = rtrim($baseUrl . $clientApiBasePath, '/') . '/resetTraffic/' . rawurlencode($email);
             $this->getClient($server)->post($resetUrl);
 
             return true;

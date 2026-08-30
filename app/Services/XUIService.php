@@ -160,73 +160,58 @@ class XUIService
                 'generated_subId' => $subId
             ]);
 
+            // Per-protocol secrets (uuid/password/auth) are generated server-side when omitted.
             $clientSettings = [
                 'id' => $uuid,
                 'email' => $clientData['email'],
+                'flow' => $clientData['flow'] ?? '',
+                'security' => 'auto',
                 'totalGB' => $clientData['total'] ?? 0,
                 'expiryTime' => $clientData['expiryTime'] ?? 0,
-                'enable' => true,
-                'tgId' => '',
-                'subId' => $subId,
+                'reset' => 0,
+                'resetDay' => 0,
+                'resetMax' => 0,
+                'trafficReset' => 'never',
+                'trafficResetDay' => 1,
                 'limitIp' => 0,
-                'flow' => '',
+                'limitHwid' => 0,
+                'tgId' => '',
+                'group' => '',
+                'comment' => '',
+                'enable' => true,
+                'subId' => $subId,
             ];
 
-            $settings = json_encode(['clients' => [$clientSettings]]);
-            $endpointsToTry = [
-                $this->basePath . "/panel/api/inbounds/addClient",
-                $this->basePath . "/panel/inbound/addClient",
-                $this->basePath . "/xui/inbound/addClient"
-            ];
+            $url = $this->baseUrl . $this->basePath . '/panel/api/clients/add';
 
-            $response = null;
-            $lastResponse = null;
-            $lastError = null;
+            Log::info('Trying XUI addClient endpoint', [
+                'url' => $url,
+                'inbound_id' => $inboundId
+            ]);
 
-            foreach ($endpointsToTry as $endpoint) {
-                $addClientUrl = $this->baseUrl . $endpoint;
-
-                Log::info('Trying XUI addClient endpoint', [
-                    'url' => $addClientUrl,
-                    'inbound_id' => $inboundId
-                ]);
-
-                $currentResponse = $this->getClient()->asForm()->post($addClientUrl, [
-                    'id' => $inboundId,
-                    'settings' => $settings,
-                ]);
-
-                $lastResponse = $currentResponse;
-                $status = $currentResponse->status();
-                $responseData = $currentResponse->json();
-
-                Log::info('XUI addClient response', [
-                    'endpoint' => $endpoint,
-                    'status' => $status,
-                    'success' => $responseData['success'] ?? false,
-                    'msg' => $responseData['msg'] ?? 'N/A'
-                ]);
-
-                if ($status === 200 && isset($responseData['success']) && $responseData['success'] === true) {
-                    $response = $currentResponse;
-                    Log::info('XUI addClient successful', ['endpoint' => $endpoint]);
-                    break;
-                } else {
-                    $lastError = $responseData['msg'] ?? $currentResponse->body();
-                }
-            }
-
-            if (!$response) {
-                $errorMsg = "All endpoints failed. Last error: " . ($lastError ?: 'Unknown error');
-                Log::error('XUI addClient failed completely', [
-                    'inbound_id' => $inboundId,
-                    'last_error' => $lastError,
-                    'last_response_body' => $lastResponse?->body()
-                ]);
-                return ['success' => false, 'msg' => $errorMsg];
-            }
+            $response = $this->getClient()->post($url, [
+                'client' => $clientSettings,
+                'inboundIds' => [$inboundId],
+            ]);
 
             $responseData = $response->json();
+
+            Log::info('XUI addClient response', [
+                'status' => $response->status(),
+                'success' => $responseData['success'] ?? false,
+                'msg' => $responseData['msg'] ?? 'N/A'
+            ]);
+
+            if (!$response->successful() || !($responseData['success'] ?? false)) {
+                Log::error('XUI addClient failed completely', [
+                    'inbound_id' => $inboundId,
+                    'status' => $response->status(),
+                    'last_error' => $responseData['msg'] ?? '',
+                    'last_response_body' => $response->body()
+                ]);
+                return ['success' => false, 'msg' => $responseData['msg'] ?? $response->body()];
+            }
+
             return array_merge($responseData, [
                 'generated_uuid' => $uuid,
                 'generated_subId' => $subId,
@@ -251,7 +236,8 @@ class XUIService
         }
 
         try {
-            $url = $this->baseUrl . $this->basePath . "/panel/api/inbounds/{$inboundId}/resetClientTraffic/" . rawurlencode($email);
+            // New Sanaei API: POST /panel/api/clients/resetTraffic/{email}
+            $url = $this->baseUrl . $this->basePath . '/panel/api/clients/resetTraffic/' . rawurlencode($email);
 
             Log::info('Resetting XUI client traffic', [
                 'url' => $url,
@@ -292,23 +278,56 @@ class XUIService
         }
 
         try {
-            $subId = $clientData['subId'] ?? Str::random(16);
+            $email = $clientData['email'] ?? null;
 
-            $clientSettings = [
+            if (empty($email)) {
+                // Resolve the email from the existing client when not provided
+                foreach ($this->getClients($inboundId) as $c) {
+                    if (($c['id'] ?? null) === $clientId) {
+                        $email = $c['email'] ?? null;
+                        break;
+                    }
+                }
+            }
+
+            if (empty($email)) {
+                return ['success' => false, 'msg' => 'Client email could not be resolved for update.'];
+            }
+
+            // New Sanaei API updates by email and replaces the full row: fetch the
+            // existing client first so unknown fields (password/auth/etc.) survive.
+            $existing = null;
+            foreach ($this->getClients($inboundId) as $c) {
+                if (($c['email'] ?? null) === $email || ($c['id'] ?? null) === $clientId) {
+                    $existing = $c;
+                    break;
+                }
+            }
+
+            $subId = $clientData['subId'] ?? ($existing['subId'] ?? Str::random(16));
+
+            $clientSettings = array_merge($existing ?? [], [
                 'id' => $clientId,
-                'email' => $clientData['email'],
-                'totalGB' => $clientData['total'] ?? 0,
-                'expiryTime' => $clientData['expiryTime'] ?? 0,
+                'email' => $email,
+                'flow' => $clientData['flow'] ?? ($existing['flow'] ?? ''),
+                'security' => $existing['security'] ?? 'auto',
+                'totalGB' => $clientData['total'] ?? ($existing['totalGB'] ?? 0),
+                'expiryTime' => $clientData['expiryTime'] ?? ($existing['expiryTime'] ?? 0),
+                'reset' => $existing['reset'] ?? 0,
+                'resetDay' => $existing['resetDay'] ?? 0,
+                'resetMax' => $existing['resetMax'] ?? 0,
+                'trafficReset' => $existing['trafficReset'] ?? 'never',
+                'trafficResetDay' => $existing['trafficResetDay'] ?? 1,
+                'limitIp' => $existing['limitIp'] ?? 0,
+                'limitHwid' => $existing['limitHwid'] ?? 0,
+                'tgId' => $existing['tgId'] ?? '',
+                'group' => $existing['group'] ?? '',
+                'comment' => $existing['comment'] ?? '',
                 'enable' => true,
-                'tgId' => '',
                 'subId' => $subId,
-                'limitIp' => 0,
-                'flow' => '',
-            ];
+            ]);
 
-            $settings = json_encode(['clients' => [$clientSettings]]);
-
-            $updateClientUrl = $this->baseUrl . $this->basePath . "/panel/api/inbounds/updateClient/{$clientId}";
+            $updateClientUrl = $this->baseUrl . $this->basePath . '/panel/api/clients/update/' . rawurlencode($email);
 
             Log::info('Updating XUI client', [
                 'url' => $updateClientUrl,
@@ -316,10 +335,7 @@ class XUIService
                 'client_id' => $clientId
             ]);
 
-            $response = $this->getClient()->asForm()->post($updateClientUrl, [
-                'id' => $inboundId,
-                'settings' => $settings,
-            ]);
+            $response = $this->getClient()->post($updateClientUrl, $clientSettings);
 
             $responseData = $response->json();
 
