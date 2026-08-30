@@ -109,8 +109,8 @@ class SanaeiService implements VpnServiceInterface
                     'email' => $username,
                     'flow' => $clientSettings['flow'] ?? '',
                     'security' => 'auto',
-                    'totalGB' => $clientSettings['totalGB'] ?? 0,
-                    'expiryTime' => $clientSettings['expiryTime'] ?? 0,
+                    'totalGB' => (int) ($clientSettings['totalGB'] ?? 0),
+                    'expiryTime' => (int) ($clientSettings['expiryTime'] ?? 0),
                     'reset' => 0,
                     'resetDay' => 0,
                     'resetMax' => 0,
@@ -118,7 +118,6 @@ class SanaeiService implements VpnServiceInterface
                     'trafficResetDay' => 1,
                     'limitIp' => 0,
                     'limitHwid' => 0,
-                    'tgId' => '',
                     'group' => '',
                     'comment' => '',
                     'enable' => true,
@@ -299,12 +298,12 @@ class SanaeiService implements VpnServiceInterface
             $currentExpiry = time() * 1000;
         }
         $newExpiry = $currentExpiry + ($daysToAdd * 86400 * 1000);
-        $client['expiryTime'] = $newExpiry;
+        $client['expiryTime'] = (int) $newExpiry;
 
         // Update Traffic Limit
         if ($trafficLimit !== null) {
             // Convert GB to Bytes
-            $client['totalGB'] = $trafficLimit * 1024 * 1024 * 1024;
+            $client['totalGB'] = (int) ($trafficLimit * 1024 * 1024 * 1024);
         }
 
         // Ensure enabled
